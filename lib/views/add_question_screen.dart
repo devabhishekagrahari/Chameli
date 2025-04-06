@@ -15,14 +15,25 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
   final TextEditingController _categoryController = TextEditingController();
   final TextEditingController _optionController = TextEditingController();
   final TextEditingController _createdByController =
-  TextEditingController(text: "admin"); // Editable now
+  TextEditingController(text: "admin");
+
   final List<String> _options = [];
   String _selectedDifficulty = 'Easy';
   String _selectedType = 'MCQ';
 
-  final FirebaseService _firebaseService = FirebaseService(); // Firebase Instance
+  final FirebaseService _firebaseService = FirebaseService();
 
-  void _saveQuestion() {
+  void _saveQuestion() async {
+    if (_questionController.text.isEmpty ||
+        _answerController.text.isEmpty ||
+        _categoryController.text.isEmpty ||
+        (_selectedType == 'MCQ' && _options.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("❗ Please fill all required fields")),
+      );
+      return;
+    }
+
     final question = Question(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       question: _questionController.text,
@@ -35,9 +46,28 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
       timestamp: DateTime.now().millisecondsSinceEpoch,
     );
 
-    _firebaseService.addQuestion(question);
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ Question saved to Firestore!")));
+    try {
+      await _firebaseService.addQuestion(question);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("✅ Question saved to Firestore!")),
+      );
+      _clearForm();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Failed to save: $e")),
+      );
+    }
+  }
+
+  void _clearForm() {
+    _questionController.clear();
+    _answerController.clear();
+    _categoryController.clear();
+    _optionController.clear();
+    _options.clear();
+    _selectedDifficulty = 'Easy';
+    _selectedType = 'MCQ';
+    setState(() {});
   }
 
   @override
@@ -61,7 +91,8 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                   ['MCQ', 'Short Answer', 'True/False'], (value) {
                     setState(() => _selectedType = value!);
                   }),
-              if (_selectedType == "MCQ") _buildTextField("Add Option", _optionController),
+              if (_selectedType == "MCQ")
+                _buildTextField("Add Option", _optionController),
               if (_selectedType == "MCQ")
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -69,7 +100,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                     onPressed: () {
                       if (_optionController.text.isNotEmpty) {
                         setState(() {
-                          _options.add(_optionController.text);
+                          _options.add(_optionController.text.trim());
                           _optionController.clear();
                         });
                       }
@@ -79,10 +110,11 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                 ),
               if (_selectedType == "MCQ")
                 Wrap(
+                  spacing: 8,
                   children:
                   _options.map((option) => Chip(label: Text(option))).toList(),
                 ),
-              _buildTextField("Created By", _createdByController), // Editable now
+              _buildTextField("Created By", _createdByController),
               const SizedBox(height: 20),
               Center(
                 child: ElevatedButton(
@@ -112,8 +144,8 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
     );
   }
 
-  Widget _buildDropdown(
-      String label, String value, List<String> items, ValueChanged<String?> onChanged) {
+  Widget _buildDropdown(String label, String value, List<String> items,
+      ValueChanged<String?> onChanged) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(

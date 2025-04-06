@@ -11,7 +11,7 @@ class AppRouter {
       case '/add-question':
         return MaterialPageRoute(builder: (_) => const AddQuestionScreen());
       case '/view-questions':
-        return MaterialPageRoute(builder: (_) => const ViewQuestionsScreen());
+        return MaterialPageRoute(builder: (_) => QuestionListScreen());
       default:
         return MaterialPageRoute(builder: (_) => const HomeScreen());
     }
